@@ -1,38 +1,121 @@
-esphome:
-  name: esphome-eqiva-lock
-  friendly_name: ESPHome Eqiva Lock
+substitutions:
+  devicename: !secret key_ble_name
+  devicefriendlyname: !secret key_ble_friendly_name
+  mqtttopicprefix: !secret mqtt_topic_prefix
 
+esphome:
+  name: ${devicename}
+  friendly_name: KeyBLE ${devicefriendlyname} Lock
+  compile_process_limit: 1
+  platformio_options:
+    board_build.flash_mode: dio
+    
 esp32:
-  board: esp32dev
+  board: esp32-c3-devkitm-1
   framework:
     type: esp-idf
     # Uncomment below for ESP32-C3 if you have unexpected reboots when encrypting data
-    # sdkconfig_options:
-      # CONFIG_BOOTLOADER_WDT_TIME_MS: "60000"
+    sdkconfig_options:
+     CONFIG_BOOTLOADER_WDT_TIME_MS: "60000"
+     
   
 # Enable logging
 logger:
-  
-# Enable Home Assistant API
+  level: DEBUG
+
+# disable Home Assistant API
 api:
-  encryption:
-    key: "yourkey"
-    
+  reboot_timeout: 0s
+
 ota:
 
+# MQTT
+mqtt:
+  broker: !secret mqtt_broker
+  port: !secret mqtt_port
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  topic_prefix: ${mqtttopicprefix}/${devicefriendlyname}
+  on_message:
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "4"
+      then:
+        - eqiva_key_ble.open
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "open"
+      then:
+        - eqiva_key_ble.open    
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "3"
+      then:
+        - eqiva_key_ble.lock
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "lock"
+      then:
+        - eqiva_key_ble.lock    
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "2"
+      then:
+        - eqiva_key_ble.unlock
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "unlock"
+      then:
+        - eqiva_key_ble.unlock
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "1"
+      then:
+        - eqiva_key_ble.status
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "status"
+      then:
+        - eqiva_key_ble.status
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "restart"
+      then:
+        - button.press: restartesp
+    - topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+      payload: "reset"
+      then:
+        - button.press: resetesp
+
 web_server:
-  include_internal: true
+  # show internal elements
+  include_internal: false
+
+  # run local or with inet connection
   local: false
+
+  # local: true
+  # css_include: style.css
+  # css_url: ""
+  # js_include: ./v2/www.js
+  # js_url: ""
+  # version: 2
+  
+  # port
   port: 80
 
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+  # security
+  auth:
+    username: !secret web_server_username
+    password: !secret web_server_password
 
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
+wifi:
+# Below can left empty because we configure wifi over AP
+  # ssid: !secret wifi_ssid
+  # password: !secret wifi_password
+  manual_ip:
+    static_ip: !secret wifi_static_ip
+    gateway: !secret wifi_gateway
+    subnet: !secret wifi_subnet
+
+
+# Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
-    ssid: "Esphome-Web-Eqiva-Lock"
-    password: "12345678"
+    # ap security
+    ssid: !secret ap_ssid
+    password: !secret ap_password
+          
   # Activate scan only after wifi connect, see https://github.com/esphome/issues/issues/2941#issuecomment-1842369092
   on_connect:
     - esp32_ble_tracker.start_scan:
@@ -44,13 +127,42 @@ wifi:
   on_disconnect:
     - esp32_ble_tracker.stop_scan:
 
-      
+# light:
+  # - platform: esp32_rmt_led_strip
+    # rgb_order: RGB
+    # pin: GPIO10
+    # num_leds: 1
+    # rmt_channel: 0
+    # chipset: ws2812
+    # name: ESP internal RGB LED
+    # id: "internalrgbled"
+
+sensor:
+  # RSSI based on MAC address
+  - platform: ble_rssi
+    mac_address: !secret key_ble_mac_address
+    name: ESP RSSI BLE
+    id: BLERSSI
+    state_topic: ${mqtttopicprefix}/${devicefriendlyname}/BLE/rssi
+  
+  # WiFi RSSI
+  - platform: wifi_signal
+    name: ESP RSSI WiFi
+    id: WIFIRSSI
+    update_interval: 60s
+    state_topic: ${mqtttopicprefix}/${devicefriendlyname}/WiFi/rssi
+
+    
+  # ESP Uptime
+  - platform: uptime
+    name: ESP Uptime
+    state_topic: ${mqtttopicprefix}/${devicefriendlyname}/ESP/uptime
 
 #button, number and text input for pairing and setting mac/user_id/user-key via UI
 button:
   - platform: template
     id: ble_settings
-    name: BLE Settings _Save_
+    name: KeyBLE Settings _Apply_
     icon: "mdi:content-save"
     on_press:
       - eqiva_key_ble.connect:
@@ -60,13 +172,13 @@ button:
   
   - platform: template
     id: ble_disconnect
-    name: BLE Settings _Disconnect_
+    name: KeyBLE Settings _Disconnect_
     icon: "mdi:clear"
     on_press:
       - eqiva_key_ble.disconnect:
   - platform: template
     id: ble_pair
-    name: BLE Pair _Start_
+    name: KeyBLE Pair _Start_
     icon: "mdi:check-underline"
     on_press:
       - eqiva_key_ble.pair:
@@ -81,12 +193,21 @@ button:
           turn_left: !lambda 'return id(direction).state == "Left";' 
           key_horizontal: !lambda 'return id(position).state == "Horizontal";'
           lock_turns: !lambda 'return atoi(id(turns).state.c_str());'
-          
+
+  - platform: restart
+    name: ESP _Restart_
+    id: "restartesp"   
+  
+  - platform: factory_reset
+    name: ESP _Factory Reset_
+    id: "resetesp"
+
 number:
   - platform: template
     mode: box
-    name: BLE Settings User ID
+    name: KeyBLE Settings User ID
     id: user_id
+    state_topic:
     max_value: 7
     min_value: 0
     step: 1
@@ -96,26 +217,30 @@ number:
 text:
   - platform: template
     mode: text
-    name: BLE Settings Mac Address
+    name: KeyBLE Settings Mac Address
     id: mac_address
+    state_topic:
     optimistic: true
     restore_value: true
   - platform: template
     mode: text
-    name: BLE Settings User Key
+    name: KeyBLE Settings User Key
     id: user_key
+    state_topic:
     optimistic: true
     restore_value: true
   - platform: template
     mode: text
-    name: BLE Pair Card Key
+    name: KeyBLE Pair Card Key
     id: card_key
+    state_topic:
     optimistic: true
 
 select:
   - platform: template
     name: Lock Settings Close Direction
     id: direction
+    state_topic:
     options:
      - "Left"
      - "Right"
@@ -123,6 +248,7 @@ select:
   - platform: template
     name: Lock Settings Key Position
     id: position
+    state_topic:
     options:
      - "Vertical"
      - "Horizontal"
@@ -130,6 +256,7 @@ select:
   - platform: template
     name: Lock Settings Turns
     id: turns
+    state_topic:
     options:
      - "1"
      - "2"
@@ -137,15 +264,19 @@ select:
      - "4"
     optimistic: true
 
-
-
-
 captive_portal:
     
+# external_components:
+  # use all components from a local folder
+  # - source:
+      # type: local
+      # path: components
+
 external_components:
   source: github://digaus/esphome-components-eqiva
   # use refresh when you do not get latest version
-  # refresh: 0s
+  refresh: 0s
+
 
 esp32_ble_tracker:
    scan_parameters:
@@ -153,34 +284,58 @@ esp32_ble_tracker:
     # Activate scan only after wifi connect, see https://github.com/esphome/issues/issues/2941#issuecomment-1842369092
     continuous: false
 
+# used for discovering the lock and get the mac_address, check logger for it
 eqiva_ble:
 
 eqiva_key_ble:
   id: key_ble
   # Below can left empty because we connect in wifi on_connect
-  # mac_address: 00:12:34:56:42:88
-  # user_id: 0
-  # user_key: 12345678636F6763386A726E33746F35
+  # mac_address: !secret key_ble_mac_address
+  # user_id: !secret key_ble_user_id
+  # user_key: !secret key_ble_user_key
 
 
 text_sensor: 
   - platform: eqiva_key_ble
     mac_address: 
-      name: "Mac Address"
+      name: ${devicename} Mac Address
+      state_topic: ${mqtttopicprefix}/${devicefriendlyname}/State/mac
     lock_status: 
-      name: "Lock Status"
+      name: ${devicename} Status
       id: lock_status
+      state_topic: ${mqtttopicprefix}/${devicefriendlyname}/State/lock_status
     low_battery:
-      name: "Low Battery"
+      name: ${devicename} Battery low
+      state_topic: ${mqtttopicprefix}/${devicefriendlyname}/State/battery_low
     lock_ble_state:
-      name: "Lock BLE State"
+      name: ${devicename} BLE Connestion State
+      state_topic: ${mqtttopicprefix}/${devicefriendlyname}/State
     user_id:
-      name: "User ID"
+      name: ${devicename} User ID
+      state_topic:
     user_key:
-      name: "User Key"
+      name: ${devicename} User Key
+      state_topic:
     # on_raw_value:
             # then:   Do stuff on state change (!lambda "return x") 
-
+  # MQTT Set command
+  - platform: mqtt_subscribe
+    name: ${devicename} last command
+    id: command
+    topic: ${mqtttopicprefix}/${devicefriendlyname}/Set
+    state_topic: ${mqtttopicprefix}/${devicefriendlyname}/command          
+  - platform: template
+    name: ${devicename} Status ID
+    id: lock_status_id
+    update_interval: 1s
+    filters:
+      - lambda: |-
+          static std::string last;
+          if (x == last)
+            return {};
+          last = x;
+          return x;
+    state_topic: ${mqtttopicprefix}/${devicefriendlyname}/State/lock_status_id
 
 # Call status every 4 minutes because lock seems to disconnect after 5 minutes of inactivity
 # need to watch battery consumption, could also do some other time or present based approaches
@@ -199,22 +354,31 @@ time:
 # One ESP per lock is still recommended
 lock:
   - platform: template
-    name: "Lock 1"
+    id: !secret key_ble_name
+    name: !secret key_ble_name
+    state_topic:
     lambda: |-
       if (id(lock_status).state == "LOCKED") {
+        id(lock_status_id).publish_state("3");
         return LOCK_STATE_LOCKED;
-      } else if (id(lock_status).state == "UNLOCKED" || id(lock_status).state == "OPENED") {
+      } else if(id(lock_status).state == "UNLOCKED") {
+        id(lock_status_id).publish_state("2");
+        return LOCK_STATE_UNLOCKED;
+      } else if(id(lock_status).state == "OPENED") {
+        id(lock_status_id).publish_state("4");
         return LOCK_STATE_UNLOCKED;
       } else if(id(lock_status).state == "MOVING") {
+        id(lock_status_id).publish_state("1");
         return {};
       } else if (id(lock_status).state == "UNKNOWN") {
-        return LOCK_STATE_JAMMED;
+        id(lock_status_id).publish_state("0");
+        return {};
       } 
       return LOCK_STATE_LOCKED;
+
     lock_action:
       - eqiva_key_ble.lock:
     unlock_action:
       - eqiva_key_ble.unlock:
     open_action:    
       - eqiva_key_ble.open:
-
