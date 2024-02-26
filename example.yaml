@@ -273,7 +273,7 @@ captive_portal:
       # path: components
 
 external_components:
-  source: github://digaus/esphome-components-eqiva
+  source: github://lumokitho/esphome-components-eqiva
   # use refresh when you do not get latest version
   refresh: 0s
 
