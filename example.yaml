@@ -119,7 +119,7 @@ wifi:
   # Activate scan only after wifi connect, see https://github.com/esphome/issues/issues/2941#issuecomment-1842369092
   on_connect:
     - esp32_ble_tracker.start_scan:
-       continuous: true
+       continuous: false
     - eqiva_key_ble.connect:
        mac_address: !lambda 'return id(mac_address).state;' 
        user_id: !lambda 'return id(user_id).state;'
@@ -169,7 +169,16 @@ button:
           mac_address: !lambda 'return id(mac_address).state;' 
           user_id: !lambda 'return id(user_id).state;'
           user_key: !lambda 'return id(user_key).state;'
-  
+
+  - platform: template
+    id: ble_scan
+    name: KeyBLE BLE-Scan _Start_
+    icon: "mdi:content-save"
+    on_press:
+    - esp32_ble_tracker.start_scan:
+       continuous: false
+       
+
   - platform: template
     id: ble_disconnect
     name: KeyBLE Settings _Disconnect_
@@ -281,6 +290,8 @@ external_components:
 esp32_ble_tracker:
    scan_parameters:
     window: 300ms
+    duration:
+     minutes: 1
     # Activate scan only after wifi connect, see https://github.com/esphome/issues/issues/2941#issuecomment-1842369092
     continuous: false
 
