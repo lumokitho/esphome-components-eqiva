@@ -7,7 +7,9 @@ I'm using a ESP32-C3, so your example was not working out of the box.
 That's the one I use:
 [ESP32-C3 Mini](https://www.waveshare.com/esp32-c3-zero.htm)
 
-# Use an ESP32-C3:
+
+
+# If you use an ESP32-C3:
 ```
 esphome:
   compile_process_limit: 1
