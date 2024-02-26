@@ -1,7 +1,18 @@
-Big thanks to previous work done by:  [@MariusSchiffer](https://github.com/MariusSchiffer/esp32-keyble), [@tc-maxx](https://github.com/tc-maxx/esp32-keyble), [@lumokitho](https://github.com/lumokitho/esp32-keyble) and the original creator [@oyooyo](https://github.com/oyooyo/keyble)
+Big thanks to previous work done by:  [@MariusSchiffer](https://github.com/MariusSchiffer/esp32-keyble), [@tc-maxx](https://github.com/tc-maxx/esp32-keyble) and the original creator [@oyooyo](https://github.com/oyooyo/keyble)
 
+I have to thank you [@digaus](https://github.com/digaus/esphome-components-eqiva) for porting this to esphome.
 
+Had no clue how good esphome is! Did some small customizations to fit my needs.
+I'm using a ESP32-C3, so your example was not working out of the box.
+That's the one I use:
+[ESP32-C3 Mini](https://www.waveshare.com/esp32-c3-zero.htm)
 
+# Use an ESP32-C3:
+esphome:
+  compile_process_limit: 1
+  platformio_options:
+    board_build.flash_mode: dio
+Needs to be set to work on the C3 module is use.
 
 # Use esp-idf framework:
 Need to use esp-idf framework due to flash limitations
