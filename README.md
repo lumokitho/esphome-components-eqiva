@@ -8,12 +8,14 @@ That's the one I use:
 [ESP32-C3 Mini](https://www.waveshare.com/esp32-c3-zero.htm)
 
 # Use an ESP32-C3:
+```
 esphome:
   compile_process_limit: 1
   platformio_options:
     board_build.flash_mode: dio
 Needs to be set to work on the C3 module is use.
 
+```
 # Use esp-idf framework:
 Need to use esp-idf framework due to flash limitations
 ```
