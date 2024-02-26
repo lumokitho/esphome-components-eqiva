@@ -3,7 +3,7 @@ Big thanks to previous work done by:  [@MariusSchiffer](https://github.com/Mariu
 I have to thank you [@digaus](https://github.com/digaus/esphome-components-eqiva) for porting this to esphome.
 
 Had no clue how good esphome is! Did some small customizations to fit my needs.
-I'm using a ESP32-C3, so your example was not working out of the box.
+I'm using an ESP32-C3, so your example was not working out of the box.
 That's the one I use:
 [ESP32-C3 Mini](https://www.waveshare.com/esp32-c3-zero.htm)
 
