@@ -13,7 +13,7 @@ esphome:
   compile_process_limit: 1
   platformio_options:
     board_build.flash_mode: dio
-Needs to be set to work on the C3 module is use.
+Needs to be set to work on the C3 module I used.
 
 ```
 # Use esp-idf framework:
